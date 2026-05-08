@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+  repository: registry.internal/ai-devops-agent
+  tag: latest
+  pullPolicy: Always
+
+resources:
+  limits:
+    memory: 4Gi
+    cpu: "2"
+  requests:
+    memory: 2Gi
+    cpu: "500m"
+
+serviceAccount:
+  create: true
+  name: ai-devops-agent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+
+persistence:
+  auditLogs:
+    size: 10Gi
+
+env: {}
+  # Overrides for non-secret settings, e.g.:
+  # OLLAMA_BASE_URL: "http://ollama-service.ai-agent.svc.cluster.local:11434"
+
+secrets: {}
+  # Reference existing secrets: snow-credentials, elasticsearch-credentials, etc.

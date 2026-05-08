@@ -1,0 +1,20 @@
+# Helm values for Milvus (milvusdb/milvus-helm)
+cluster:
+  enabled: false
+
+standalone:
+  persistence:
+    enabled: true
+    size: 50Gi
+
+minio:
+  mode: standalone
+  persistence:
+    enabled: true
+    size: 10Gi
+
+etcd:
+  replicaCount: 1
+  persistence:
+    enabled: true
+    size: 10Gi

@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-devops-agent.fullname" . }}-config
+  labels:
+    {{- include "ai-devops-agent.labels" . | nindent 4 }}
+data:
+  OLLAMA_BASE_URL: "http://ollama-service.ai-agent.svc.cluster.local:11434"
+  OLLAMA_LLM_MODEL: "llama3.1:70b"
+  OLLAMA_EMBED_MODEL: "nomic-embed-text"
+  MILVUS_HOST: "milvus.ai-agent.svc.cluster.local"
+  MILVUS_PORT: "19530"
+  MILVUS_COLLECTION: "devops_knowledge"
+  PROMETHEUS_URL: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
+  ELASTICSEARCH_CA_CERT: "/certs/elastic-ca.crt"
+  SNOW_CA_CERT: "/certs/internal-ca.crt"
+  SSH_KEY_PATH: "/secrets/ai-agent-ssh-key"
+  SSH_KNOWN_HOSTS: "/secrets/known_hosts"
+  AUDIT_LOG_PATH: "/var/log/ai-agent/audit.log"
+  K8S_NAMESPACE_PROD: "production"
+  SNOW_ASSIGNMENT_GROUP: "DevOps-Team"
+  SNOW_AUTO_CLOSE_PRIORITIES: "2,3"
+  AUTO_FIX_CONFIDENCE_THRESHOLD: "80"
+  MAX_AUTO_FIX_ATTEMPTS: "2"
+  VERIFY_WAIT_SECONDS: "120"

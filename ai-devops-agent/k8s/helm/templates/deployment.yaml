@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-devops-agent.fullname" . }}
+  labels:
+    {{- include "ai-devops-agent.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ai-devops-agent.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ai-devops-agent.selectorLabels" . | nindent 8 }}
+    spec:
+      initContainers:
+        - name: wait-for-ollama
+          image: curlimages/curl:latest
+          command: ["sh", "-c", "until curl -sf http://ollama-service.ai-agent.svc.cluster.local:11434/api/tags; do echo waiting ollama; sleep 5; done"]
+        - name: wait-for-milvus
+          image: python:3.11-slim
+          command: ["sh", "-c", "pip install pymilvus -q && python -c \"from pymilvus import connections; connections.connect(host='milvus.ai-agent.svc.cluster.local', port=19530, timeout=10); print('ok')\""]
+      serviceAccountName: {{ include "ai-devops-agent.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        readOnlyRootFilesystem: true
+      containers:
+        - name: ai-devops-agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "ai-devops-agent.fullname" . }}-config
+            - secretRef:
+                name: {{ include "ai-devops-agent.fullname" . }}-secrets
+                optional: true
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: ssh-key
+              mountPath: /secrets
+              readOnly: true
+            - name: certs
+              mountPath: /certs
+              readOnly: true
+            - name: audit-log
+              mountPath: /var/log/ai-agent
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: ssh-key
+          secret:
+            secretName: ai-devops-agent-ssh-key
+            defaultMode: 0400
+        - name: certs
+          secret:
+            secretName: ai-devops-agent-certs
+            optional: true
+        - name: audit-log
+          persistentVolumeClaim:
+            claimName: {{ include "ai-devops-agent.fullname" . }}-audit-log
+        - name: tmp
+          emptyDir: {}

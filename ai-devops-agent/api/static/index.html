@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI DevOps Agent — Status</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --ok: #3fb950;
+      --fail: #f85149;
+      --warn: #d29922;
+      --accent: #58a6ff;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .subtitle { color: var(--text-muted); margin-bottom: 24px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin: 0 0 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .status-row:last-child { border-bottom: none; }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot.ok { background: var(--ok); }
+    .dot.fail { background: var(--fail); }
+    .dot.pending { background: var(--text-muted); animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: 0.5; } }
+    .label { font-weight: 500; }
+    .detail { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); }
+    .how {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      padding-left: 0;
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .stat {
+      background: var(--bg);
+      border-radius: var(--radius);
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 600; color: var(--accent); }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+    .refresh {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+    .refresh a { color: var(--accent); text-decoration: none; }
+    .refresh a:hover { text-decoration: underline; }
+    .error-msg { color: var(--fail); font-size: 12px; margin-top: 4px; }
+    ul.plain { list-style: none; padding: 0; margin: 0; }
+    ul.plain li { padding: 4px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .api-base {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .api-base input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 4px;
+      width: 280px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI DevOps Agent</h1>
+    <p class="subtitle">Status dashboard — what’s working, what’s not, and how it works.</p>
+    <p class="refresh">Last updated: <span id="lastUpdate">—</span> · <a href="#" id="refreshLink">Refresh now</a></p>
+
+    <div class="card">
+      <h2>API &amp; dependencies</h2>
+      <div id="healthRow" class="status-row">
+        <span class="dot pending"></span>
+        <span class="label">API (liveness)</span>
+        <span class="detail" id="healthDetail">Checking…</span>
+      </div>
+      <div id="readyRow" class="status-row">
+        <span class="dot pending"></span>
+        <span class="label">Readiness (Ollama + Milvus + ServiceNow)</span>
+        <span class="detail" id="readyDetail">Checking…</span>
+      </div>
+      <div id="checksContainer"></div>
+      <p class="how">
+        <strong>How:</strong> The agent runs a FastAPI server on port 8080. <code>/health</code> confirms the process is alive.
+        <code>/ready</code> checks Ollama (LLM), Milvus (RAG), and ServiceNow; the agent is only “ready” when all three are reachable.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Agent stats</h2>
+      <div class="grid">
+        <div class="stat"><div class="stat-value" id="statProcessed">—</div><div class="stat-label">Processed</div></div>
+        <div class="stat"><div class="stat-value" id="statResolved">—</div><div class="stat-label">Resolved</div></div>
+        <div class="stat"><div class="stat-value" id="statEscalated">—</div><div class="stat-label">Escalated</div></div>
+      </div>
+      <p class="how">
+        <strong>How:</strong> The agent fetches open incidents from ServiceNow (poller), runs a LangGraph workflow (RAG → logs → diagnose → fix or escalate), and updates SNOW. These counts reflect processed, auto-resolved, and escalated incidents.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Active incidents</h2>
+      <div id="activeList">—</div>
+      <p class="how">
+        <strong>How:</strong> Incidents currently being processed by the agent. You can trigger one manually with <code>POST /incidents/{id}/trigger</code> or let the poller pick them up automatically.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Audit log (last 10)</h2>
+      <div id="auditList">—</div>
+      <p class="how">
+        <strong>How:</strong> Every SSH command and remediation action is logged. Full list at <code>GET /audit-log</code>.
+      </p>
+    </div>
+
+    <div class="api-base">
+      API base: <input type="text" id="apiBase" value="" placeholder="e.g. http://localhost:8080" />
+    </div>
+  </div>
+  <script>
+    function getBase() {
+      const base = document.getElementById('apiBase').value.trim();
+      if (base) return base;
+      return window.location.port === '8080' ? window.location.origin : window.location.origin.replace(/:\d+$/, '') + ':8080';
+    }
+    function setLastUpdate() {
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+    }
+    function setDot(row, ok) {
+      const dot = row.querySelector('.dot');
+      dot.classList.remove('pending', 'ok', 'fail');
+      dot.classList.add(ok ? 'ok' : 'fail');
+    }
+    async function fetchJson(path) {
+      const base = getBase();
+      const res = await fetch(base + path);
+      const ok = res.ok;
+      const data = ok ? await res.json().catch(() => ({})) : null;
+      return { ok, status: res.status, data };
+    }
+    async function load() {
+      setLastUpdate();
+      const base = getBase();
+
+      // Health
+      const healthRes = await fetchJson('/health');
+      const healthRow = document.getElementById('healthRow');
+      setDot(healthRow, healthRes.ok);
+      document.getElementById('healthDetail').textContent = healthRes.ok ? 'OK' : 'Failed (' + healthRes.status + ')';
+
+      // Ready + checks
+      const readyRes = await fetchJson('/ready');
+      const readyRow = document.getElementById('readyRow');
+      const ready = readyRes.data && readyRes.data.ready === true;
+      setDot(readyRow, readyRes.ok && ready);
+      document.getElementById('readyDetail').textContent = ready ? 'All dependencies OK' : (readyRes.ok ? 'Some dependencies down' : 'Request failed');
+
+      const container = document.getElementById('checksContainer');
+      container.innerHTML = '';
+      if (readyRes.data && readyRes.data.checks) {
+        const checks = readyRes.data.checks;
+        for (const [name, value] of Object.entries(checks)) {
+          if (name.endsWith('_error')) continue;
+          const row = document.createElement('div');
+          row.className = 'status-row';
+          const ok = value === true;
+          row.innerHTML =
+            '<span class="dot ' + (ok ? 'ok' : 'fail') + '"></span>' +
+            '<span class="label">' + name + '</span>' +
+            (checks[name + '_error'] ? '<span class="error-msg">' + checks[name + '_error'] + '</span>' : '');
+          container.appendChild(row);
+        }
+      }
+
+      // Agent stats
+      const statsRes = await fetchJson('/agent/stats');
+      const stats = statsRes.data || {};
+      document.getElementById('statProcessed').textContent = stats.processed ?? '—';
+      document.getElementById('statResolved').textContent = stats.resolved ?? '—';
+      document.getElementById('statEscalated').textContent = stats.escalated ?? '—';
+
+      // Active incidents
+      const activeRes = await fetchJson('/incidents/active');
+      const active = (activeRes.data && activeRes.data.active) || [];
+      const activeEl = document.getElementById('activeList');
+      if (active.length) {
+        const ul = document.createElement('ul');
+        ul.className = 'plain';
+        active.forEach(id => {
+          const li = document.createElement('li');
+          li.textContent = id;
+          ul.appendChild(li);
+        });
+        activeEl.innerHTML = '';
+        activeEl.appendChild(ul);
+      } else {
+        activeEl.textContent = 'None';
+      }
+
+      // Audit log (last 10)
+      const auditRes = await fetchJson('/audit-log');
+      const entries = (auditRes.data && auditRes.data.entries) || [];
+      const auditEl = document.getElementById('auditList');
+      const show = entries.slice(0, 10);
+      if (show.length) {
+        const ul = document.createElement('ul');
+        ul.className = 'plain';
+        show.forEach(e => {
+          const li = document.createElement('li');
+          li.textContent = typeof e === 'object' ? JSON.stringify(e).slice(0, 120) + (JSON.stringify(e).length > 120 ? '…' : '') : e;
+          ul.appendChild(li);
+        });
+        auditEl.innerHTML = '';
+        auditEl.appendChild(ul);
+      } else {
+        auditEl.textContent = 'No entries';
+      }
+    }
+    document.getElementById('refreshLink').addEventListener('click', e => { e.preventDefault(); load(); });
+    document.getElementById('apiBase').addEventListener('change', load);
+    if (!document.getElementById('apiBase').value) {
+      document.getElementById('apiBase').value = window.location.port === '8080' ? window.location.origin : window.location.origin.replace(/:\d+$/, '') + ':8080';
+    }
+    load();
+    setInterval(load, 30000);
+  </script>
+</body>
+</html>

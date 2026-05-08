@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "ai-devops-agent.fullname" . }}
+  labels:
+    {{- include "ai-devops-agent.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "ai-devops-agent.selectorLabels" . | nindent 6 }}

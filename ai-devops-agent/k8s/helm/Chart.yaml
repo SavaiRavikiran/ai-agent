@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ai-devops-agent
+description: AI DevOps Agent - on-premise incident triage and remediation
+version: 1.0.0
+appVersion: "1.0"
+kubeVersion: ">=1.24.0"

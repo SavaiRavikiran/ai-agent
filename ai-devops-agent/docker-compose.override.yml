@@ -1,0 +1,4 @@
+# Override for local dev (e.g. Mac): run Ollama without GPU
+services:
+  ollama:
+    deploy: {}
