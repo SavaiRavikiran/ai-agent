@@ -4,6 +4,10 @@ Marketing/landing site for **Agentic** — "Autonomous AI Agents at Scale". Buil
 
 This is a standalone frontend: a static/animated landing page with no backend of its own and no API routes. It does not talk to the `ai-devops-agent` service in this repo.
 
+## Preview
+
+![Landing page screenshot](docs/landing-page-screenshot.png)
+
 ## Tech stack
 
 - **Framework**: Next.js 16 (Turbopack dev server)
