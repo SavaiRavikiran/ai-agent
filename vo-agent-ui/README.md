@@ -6,7 +6,7 @@ This is a standalone frontend: a static/animated landing page with no backend of
 
 ## Preview
 
-![Landing page screenshot](docs/landing-page-screenshot.webp)
+![Landing page screenshot](docs/landing-page-screenshot.png)
 
 ## Tech stack
 
